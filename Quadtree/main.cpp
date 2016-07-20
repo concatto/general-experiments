@@ -14,7 +14,7 @@ struct Rectangle {
 
     bool contains(const Rectangle& other) {
         return other.x >= x && other.y >= y &&
-                other.width <= width && other.height <= height;
+                (other.width + other.x) <= (width + x) && (other.height + other.y) <= (height + y);
     }
 
     bool intersects(const Rectangle& other) {
@@ -28,6 +28,7 @@ struct Rectangle {
 };
 
 struct Quadtree {
+    static const unsigned int Threshold = 10;
     Rectangle box;
     Quadtree* children[4];
     std::vector<Rectangle*> objects;
@@ -42,14 +43,25 @@ struct Quadtree {
 
     void insert(Rectangle& rect) {
         for (int i = 0; i < 4; i++) {
-            if (children[i] != nullptr && children[i]->box.contains(rect)) {
-                children[i]->insert(rect);
-                return;
+            if (children[i] != nullptr) {
+                std::cout << "Testing if ";
+                children[i]->box.print();
+                std::cout << "Contains ";
+                rect.print();
+
+                if (children[i]->box.contains(rect)) {
+                    std::cout << "Does!\n";
+                    children[i]->insert(rect);
+                    return;
+                }
+                std::cout << "Doesn't!\n";
             }
         }
 
         //Rectangle does not fit within children or there's no children
         objects.push_back(&rect);
+
+        if (objects.size() > Threshold) subdivide();
     }
 
     void subdivide() {
@@ -57,7 +69,9 @@ struct Quadtree {
         float halfHeight = box.height / 2.0;
 
         for (int i = 0; i < 4; i++) {
-            children[i] = new Quadtree(Rectangle((i % 2) * halfWidth, (i / 2) * halfHeight, halfWidth, halfHeight));
+            Rectangle r((i % 2) * halfWidth, (i / 2) * halfHeight, halfWidth, halfHeight);
+            r.print();
+            children[i] = new Quadtree(r);
         }
 
         std::vector<Rectangle*> copy(objects);
